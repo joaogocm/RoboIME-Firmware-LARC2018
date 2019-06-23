@@ -32,7 +32,7 @@ Robo::Robo(Motor *roboMotor0, Motor *roboMotor1, Motor *roboMotor2, Motor *roboM
 	motors[3]=roboMotor3;
 	roboAdc = sensorAdc;
 	roboAdc->ADC_Config();
-	_id=ID;
+	//_id=ID;
 	//_id=0;
 	//chute_alto = new GPIO(GPIOB, GPIO_Pin_0);
 	//chute_baixo = new GPIO(GPIOD, GPIO_Pin_10);
@@ -192,9 +192,10 @@ void Robo::control_speed(){
 void Robo::set_robo_speed(float v_r, float v_t, float w){
 
 	speed[0] = v_t*cos_phi - v_r*sin_phi + w*R;
+	speed[1] = v_t*cos_theta + v_r*sin_theta + w*R;
 	speed[2] = -v_t*cos_phi - v_r*sin_phi + w*R;
 	speed[3] = -v_t*cos_theta + v_r*sin_theta + w*R;
-	speed[1] = v_t*cos_theta + v_r*sin_theta + w*R;
+
 	//speed[] está em m/s. Cuidado para manter a mesma unidade qnd passar pros motores
 }
 
@@ -336,4 +337,8 @@ void Robo::IncId(){
 void Robo::ZeraId(){
 	_id=0;
 	_nrf24->StartRX_ESB(channel, address + GetId(), 32, 1);
+}
+void Robo::SetId(int id){
+	_id=id;
+	_nrf24->StartRX_ESB(channel, address + id, 32, 1);
 }

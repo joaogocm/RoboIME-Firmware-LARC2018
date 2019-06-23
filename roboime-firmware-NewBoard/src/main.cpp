@@ -31,6 +31,7 @@
 #include "radio/commands.h"
 
 #include "Robo.h"
+#include "flash.h"
 
 static __IO uint32_t TimingDelay;
 
@@ -94,10 +95,10 @@ void ShowNumber(int number){
 	numero[8]=0xF7;//todos menos o 0x08
 	numero[9]=0xD7;//01+02+08+10+40+04
 	numero[10]=0xE7;
-	//numero[11]=0xF2;
-	//numero[12]=0x71;
-	//numero[13]=0xB6;
-	//numero[14]=0xF1;
+	numero[11]=0xF2;
+	numero[12]=0x71;
+	numero[13]=0xB6;
+	numero[14]=0xF1;
 	//numero[15]=0xE1;
 	//int k=0;
 	uint8_t ID;
@@ -113,16 +114,16 @@ void ShowNumber(int number){
 
 int main(void){
 
-
-	uint32_t x1 = GetLocalTime();
-	uint32_t x2= GetLocalTime();
+	int flagIDchange = 0;
+	uint32_t time_display_on = GetLocalTime();
+	uint32_t time_debounce = GetLocalTime();
+	uint32_t x2 = GetLocalTime();
 	//ShowNumber(robo.GetId());
 	uint8_t bitStatus3 = (uint8_t)Bit_RESET;//adicionado pra tentar a logica do botão
 	uint8_t bitStatus2 = (uint8_t)Bit_SET;//adicionado pra tentar a logica do botão
-	uint8_t bitStatus= (uint8_t)Bit_SET;//adicionado pra tentar a logica do botão
+	uint8_t bitStatus = (uint8_t)Bit_SET;//adicionado pra tentar a logica do botão
 
 	LIS3DSH_CSN.Set();
-	//robo.drible->Set_Vel(0); não da certo
 	SysTick_Config(SystemCoreClock/1000);
 	usb.Init();
 	robo.init();
@@ -152,36 +153,71 @@ int main(void){
 		spi_mpu.Release();
 		resp_mpu++;
 
-	while(1){
-		if(GetLocalTime()-x1>2000){
-			ShowNumber(16);
-			x1=GetLocalTime();
+	//sets the previous written id on the flash on the robot.
+		uint32_t FLASH_SECTOR_ADDRESS;
+		FLASH_SECTOR_ADDRESS = ADDR_FLASH_SECTOR_7;
+		uint32_t NEXT_FLASH_SECTOR_ADDRESS;
+		NEXT_FLASH_SECTOR_ADDRESS = ADDR_FLASH_SECTOR_8;
+
+		int id = ReadID(FLASH_SECTOR_ADDRESS, NEXT_FLASH_SECTOR_ADDRESS);
+		if (id>10) id = 0;
+		robo.SetId(id);
+
+		while (GetLocalTime() - x2 < 800){
+			ShowNumber(robo.GetId());
 		}
-		//x1=GetLocalTime();
+		ShowNumber(16);
+
+	while(1){
+		if(id==16){
+			ShowNumber(14); //letter "e" for error.
+		}
+
+		if(GetLocalTime() - time_display_on>2000){
+			ShowNumber(16); //turns off display
+			time_display_on = GetLocalTime();
+		}
+
+		//else{
+		//	ShowNumber(robo.GetId());
+		//}
+
 		//robo.drible->Set_Vel(0);
 		//TIM_SetCompare4(TIM8,500);
 		/* inicio de tentativa de logica para o botão*/
 
-		if(GetLocalTime()-x2>100){
+		if(GetLocalTime() - time_debounce>100){
 			bitStatus=ID_Button.Read();
 			if(bitStatus==bitStatus3){
 				if(bitStatus!=bitStatus2){
 					if(bitStatus==(uint8_t)Bit_RESET){
-						if(robo.GetId()<10){
-							robo.IncId();
-							ShowNumber(robo.GetId());
+						if(robo.GetId()<10) {
+							id++;
+							//robo.IncId();
+							//ShowNumber(robo.GetId());
 						}
-						else{
-							robo.ZeraId();
-							ShowNumber(robo.GetId());
+						else {
+							id=0;
+							//robo.ZeraId();
+							//ShowNumber(robo.GetId());
 						}
+						flagIDchange = 1;
 					}
 					bitStatus2=bitStatus;
 				}
 			}
 			bitStatus3=bitStatus;
-			x2=GetLocalTime();
+			time_debounce = GetLocalTime();
 		}
+
+		if(flagIDchange){
+			WriteFlash(FLASH_SECTOR_ADDRESS, NEXT_FLASH_SECTOR_ADDRESS, (uint32_t) id);
+			robo.SetId(id);
+			flagIDchange = 0;
+			ShowNumber(robo.GetId());
+		}
+		//ShowNumber(robo.GetId());
+		//ShowNumber(ReadID(FLASH_SECTOR_ADDRESS, NEXT_FLASH_SECTOR_ADDRESS)<10);
 
 		if(GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_11)){
 			led_c.On(); //acende LED do chute quando o robô está com a bola
