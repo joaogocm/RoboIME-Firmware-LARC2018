@@ -77,7 +77,9 @@ pb_istream_t pb_istream_from_circularbuffer(CircularBuffer<uint8_t> *circularbuf
 	stream.errmsg = NULL;
 	return stream;
 }
-int ShowNumber(int number){
+
+/*********** Cálculo do ID **************/
+void ShowNumber(int number){
 
 	uint8_t numero[17];
 	numero[16]=0x0;
@@ -98,18 +100,17 @@ int ShowNumber(int number){
 	//numero[14]=0xF1;
 	//numero[15]=0xE1;
 	//int k=0;
-	uint8_t a;
+	uint8_t ID;
 	//int i=0;
 
-	a=numero[number];
+	ID=numero[number];
 
 	i2c_a.WriteRegByte(0x82, 0x04, ~0x04);
-	i2c_a.WriteRegByte(0x82, 0x17, a);
-	i2c_a.WriteRegByte(0x82, 0x13, a);
-	i2c_a.WriteRegByte(0x82, 0x10, a);
-
-	return 0;
+	i2c_a.WriteRegByte(0x82, 0x17, ID);
+	i2c_a.WriteRegByte(0x82, 0x13, ID);
+	i2c_a.WriteRegByte(0x82, 0x10, ID);
 }
+
 int main(void){
 
 
@@ -136,9 +137,9 @@ int main(void){
 
 	uint32_t last_charge_en=0;
 
-	IO_Pin_STM32 CT(IO_Pin::IO_Pin_Mode_OUT, GPIOD, GPIO_Pin_8, GPIO_PuPd_UP, GPIO_OType_PP);//tem que confirmar
-	//mudanca de plca: CA -> CT e CT -> CA
+	IO_Pin_STM32 CE(IO_Pin::IO_Pin_Mode_OUT, GPIOD, GPIO_Pin_8, GPIO_PuPd_UP, GPIO_OType_PP); //PD8->CHARGE ENABLE
 
+	/***************************** CORRIGIR CODIGOS DO STMPE E DO MPU PARA SPL ********************************/
 	//TESTE STMPE
 		uint8_t i2c_ta_ai = i2c_a.ReadRegByte(0x82, 0x00);
 		i2c_ta_ai++;
@@ -181,19 +182,20 @@ int main(void){
 			bitStatus3=bitStatus;
 			x2=GetLocalTime();
 		}
+
 		if(GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_11)){
-			led_c.On();
-			robo.drible->Set_Vel(0);
+			led_c.On(); //acende LED do chute quando o robô está com a bola
+			robo.motorDrible->Set_Vel(0); //garante que o drible está desligado quando o robô está com a bola
 		}
-		else
-			led_c.Off();
+		else led_c.Off();
+
 		robo._nrf24->InterruptCallback();
 		usb_device_class_cdc_vcp.GetData(_usbserialbuffer, 1024);
-		CT.Set();
+		CE.Set();
 
-		if(GetLocalTime() - last_charge_en > 6000){
+		if(GetLocalTime() - last_charge_en > 5000){
 			last_charge_en=GetLocalTime();
-			CT.Reset();
+			CE.Reset();
 		}
 
 		if(robo.InTestMode()){

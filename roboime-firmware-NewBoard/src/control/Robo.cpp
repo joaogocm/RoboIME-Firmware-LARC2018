@@ -7,22 +7,25 @@
 
 #include "Robo.h"
 #include "pins.h"
-//extern IO_Pin_STM32 ID_Button(IO_Pin::IO_Pin_Mode_IN, GPIOE, GPIO_Pin_2, GPIO_PuPd_NOPULL);
 #define sin_phi 0.50
 #define cos_phi 0.866
 #define sin_theta 0.707
 #define cos_theta 0.707
+#define R 0.075 //Raio do robo = 9cm
 
 /*#define alfa 1
 #define Massa 3
 #define Raio 0.09*/
 
-Robo::Robo(Motor *roboMotor0, Motor *roboMotor1, Motor *roboMotor2, Motor *roboMotor3, NRF24L01P *mynrf24, uint8_t ID, adc *sensorAdc, dibre *_drible, bool testmode):
+Robo::Robo(Motor *roboMotor0, Motor *roboMotor1, Motor *roboMotor2, Motor *roboMotor3, NRF24L01P *mynrf24, uint8_t ID, adc *sensorAdc, Drible *roboDrible, Kick *roboHighKick, Kick *roboLowKick, bool testmode):
 	//uint8_t bitStatus2 = 0;
 	_nrf24(mynrf24),
 	_testmode(testmode),
 	printv(false)
 {
+	high_kick=roboHighKick;
+	low_kick=roboLowKick;
+	motorDrible=roboDrible;
 	motors[0]=roboMotor0;
 	motors[1]=roboMotor1;
 	motors[2]=roboMotor2;
@@ -31,9 +34,8 @@ Robo::Robo(Motor *roboMotor0, Motor *roboMotor1, Motor *roboMotor2, Motor *roboM
 	roboAdc->ADC_Config();
 	_id=ID;
 	//_id=0;
-	drible = _drible;
-	high_kick = new GPIO(GPIOB, GPIO_Pin_0);
-	chute_baixo = new GPIO(GPIOD, GPIO_Pin_10);
+	//chute_alto = new GPIO(GPIOB, GPIO_Pin_0);
+	//chute_baixo = new GPIO(GPIOD, GPIO_Pin_10);
 	/* inicio de tentativa de logica para o botão*/
 	/*uint8_t bitStatus2 = (uint8_t)Bit_RESET;
 	uint8_t bitStatus=ID_Button.Read();
@@ -75,30 +77,20 @@ void Robo::init(){
 	_nrf24->StartRX_ESB(channel, address + GetId(), 32, 1);
 }
 
-IO_Pin_STM32 CT(IO_Pin::IO_Pin_Mode_OUT, GPIOD, GPIO_Pin_8, GPIO_PuPd_UP, GPIO_OType_PP);
-
-void Robo::HighKick(float power){
+void Robo::high_kick_cmd(float power){
 	if((GetLocalTime()-last_kick_time)>700){
 			if(GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_11)){
-				CT.Set();
-				high_kick->Set();
-				for(int i=0;i<0xeee2;i++);
-				high_kick->Reset();
+				high_kick->kick_cmd((uint32_t) power);
 				last_kick_time = GetLocalTime();
-				CT.Reset();
 			}
 		}
 }
 
-void Robo::ChuteBaixo(float power){
+void Robo::low_kick_cmd(float power){
 	if((GetLocalTime()-last_kick_time)>700){
 		if(GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_11)){
-			CT.Set();
-			chute_baixo->Set();
-			delay_ticks((uint32_t) (power*611)); //611 = Gustavo's magic number
-			chute_baixo->Reset();
+			low_kick->kick_cmd((uint32_t) power);
 			last_kick_time = GetLocalTime();
-			CT.Reset();
 		}
 	}
 }
@@ -108,22 +100,69 @@ void Robo::control_pos(){
 		motors[i]->Control_Pos(pos[i]);
 	}
 }
+
+//armazena as velocidades lineares dos centros das RODAS em *real_wheel_speed
+void Robo::get_wheel_speed(){
+	for(int i=0; i<4; i++){
+		real_wheel_speed[i]=motors[i]->real_wheel_speed;
+	}
+}
+
+void Robo::control_robo_speed(float v_r, float v_t, float w){
+	get_wheel_speed();
+
+	//error=V(intel)-(D+)*(real_wheel_speed):
+	error_r=v_r-(-0.4142*real_wheel_speed[0]+0.4142*real_wheel_speed[1]-0.4142*real_wheel_speed[2]+0.4142*real_wheel_speed[3]);
+	error_t=v_t-(0.3464*real_wheel_speed[0]+0.2828*real_wheel_speed[1]-0.3464*real_wheel_speed[2]-0.2828*real_wheel_speed[3]);
+	error_w=w-(0.2929*real_wheel_speed[0]+0.2071*real_wheel_speed[1]+0.2929*real_wheel_speed[2]+0.2071*real_wheel_speed[3])/R;
+
+	float pid_r, pid_t, pid_w; //armazena v_r, v_t e wR calculados pelo PID
+
+	pid_r=robo_pid(0, 0, 0, error_r, ierror_r, derror_r, last_error_r);
+	pid_t=robo_pid(0, 0, 0, error_t, ierror_t, derror_t, last_error_t);
+	pid_w=robo_pid(0, 0, 0, error_w, ierror_w, derror_w, last_error_w);
+
+	robo.set_robo_speed(v_r+pid_r, v_t+pid_t, w+pid_w); //atualiza os valores desejados de velocidade para cada motor após o PID
+}
+
+float Robo::robo_pid(float cp, float ci, float cd, float error, float ierror, float derror, float *last_error){
+
+	//implementar PID para o robo ~usando metodo tustin de discretização~
+
+	ierror = 0;
+
+	for(int j = 18; j > 0; j--){
+		last_error[j+1]=last_error[j];
+		ierror = ierror + last_error[j+1];
+	}
+
+	last_error[0]=error;
+	ierror = ierror + last_error[0];
+	//if(ierror > 1000) ierror = 1000;
+	//if(ierror < -1000) ierror = -1000;
+
+	derror=error-last_error[1];
+
+	float out=cp*error + ci*ierror + cd*derror;
+
+	return out;
+}
+
+//*******  REVISAR CÓDIGO ABAIXO SOBRE CHECAGEM DE DESLIZAMENTO  ******//
 void Robo::control_speed(){
   vBat = 4.3*roboAdc->adc_getConversion();
-//testa e corrige eventual deslizamento
+
   float v0= motors[0]->real_wheel_speed;
   float v1= motors[1]->real_wheel_speed;
   float v2= motors[2]->real_wheel_speed;
   float v3= motors[3]->real_wheel_speed;
 
-  //float M1 = 0.2*(v0-v3)+0.24495*(v1-v2);
-  //float M2 = -0.24495*(v0-v3)+0.3*(v1-v2);
   float proj=-0.5477*v0+0.4472*v1+0.5477*v2-0.4472*v3;
   //vBat=7;
   if(vBat>6.2){
     if(proj<1 && proj>-1){
     	for(int i=0; i<4; i++){
-    		motors[i]->Control_Speed(speed[i]); //manda a velocidade speed[i] pro motor[i] na unidade m/s
+    		motors[i]->control_motor_speed(speed[i]); //manda a velocidade speed[i] pro motor[i] na unidade m/s
     	}
     }
     else {
@@ -137,61 +176,56 @@ void Robo::control_speed(){
     	speed[2]=v2-(-0.5477*v0+0.4472*v1+0.5477*v2-0.4472*v3)*(0.5477);
     	speed[3]=v3-(-0.5477*v0+0.4472*v1+0.5477*v2-0.4472*v3)*(-0.4472);
     	for(int i=0; i<4; i++){
-     		motors[i]->Control_Speed(speed[i]); //manda a velocidade speed[i] pro motor[i] na unidade m/s
+     		motors[i]->control_motor_speed(speed[i]); //manda a velocidade speed[i] pro motor[i] na unidade m/s
      	}
-    }//*/
+    }
   }
-  else{//medida de proteção: se a bateria estiver fraca, o robô para
+  else{
     for(int i=0; i<4; i++){
 	  motors[i]->SetDutyCycle(0);
     }
   }
 }
 
-//armazena as velocidades lineares dos centros das RODAS em ptr
-void Robo::get_wheel_speeds(float ptr[]){
-	for(int i=0; i<4; i++){
-		ptr[i]=motors[i]->real_wheel_speed;
-	}
-	return;
-}
-
 //recebe as velocidades radial, tangente em m/s e w em rad/s
 //grava em speed[] os valores em m/s da velocidade DAS RODAS
-void Robo::set_speed(float v_r, float v_t, float w){
-	float R = 0.075; //Raio do robo = 9cm
+void Robo::set_robo_speed(float v_r, float v_t, float w){
 
 	speed[0] = v_t*cos_phi - v_r*sin_phi + w*R;
 	speed[2] = -v_t*cos_phi - v_r*sin_phi + w*R;
 	speed[3] = -v_t*cos_theta + v_r*sin_theta + w*R;
 	speed[1] = v_t*cos_theta + v_r*sin_theta + w*R;
-	//speed[] = 0.176; //teste: para cada roda girar com período 1s
 	//speed[] está em m/s. Cuidado para manter a mesma unidade qnd passar pros motores
-
 }
 
-void Robo::set_speed(float v[]){
+void Robo::set_robo_speed(float *v){
 	speed[0] = v[0];
 	speed[1] = v[1];
 	speed[2] = v[2];
 	speed[3] = v[3];
 }
 
-void Robo::set_motor_speed(uint8_t motnr, float vel) {
+void Robo::set_motor_speed(uint8_t motnr, float vel){
 	if(motnr<4){
 		speed[motnr]=vel;
 	}
 }
 
+void Robo::set_motor_speed(){
+	for(int i=0; i<4; i++){
+ 		motors[i]->control_motor_speed(speed[i]); //manda a velocidade speed[i] pro motor[i] na unidade m/s
+ 	}
+}
+
 void Robo::interrupt_control(){
-	get_wheel_speeds(robo.real_wheel_speed);//update real_wheel_speed com as velocidades medidas
+	get_wheel_speed(); //update real_wheel_speed com as velocidades medidas
 	if(controlbit&&(!stepbit)){
-		control_speed();
+		robo.set_motor_speed();
 	}
 	if(!controlbit){
 		for(int j=0; j<4; j++){
 			if(!stepbit)motors[j]->SetDutyCycle(0);
-			motors[j]->Calc_Speed();
+			motors[j]->get_motor_speed();
 		}
 	}
 	if (printv){
@@ -242,6 +276,7 @@ void Robo::interruptReceive(){
 		controlbit = false;
 	}
 }
+
 void Robo::interruptTestMode(){
 	cmdline.In(_usbserialbuffer);
 	cmdline.Out(_usbserialbuffer);
@@ -253,20 +288,19 @@ void Robo::interruptTestMode(){
 	}
 	//robo.controlbit = true;
 }
+
 void Robo::processPacket(){
-	robo.set_speed(robotcmd.veltangent, robotcmd.velnormal, robotcmd.velangular);
+	robo.control_robo_speed(robotcmd.veltangent, robotcmd.velnormal, robotcmd.velangular);
 	if(robotcmd.kickspeedx!=0)
-		robo.ChuteBaixo(robotcmd.kickspeedx);
+		robo.low_kick_cmd(robotcmd.kickspeedx);
 	if(robotcmd.kickspeedz!=0)
-		robo.HighKick(robotcmd.kickspeedz);
+		robo.high_kick_cmd(robotcmd.kickspeedz);
 	if(robotcmd.spinner)
-		robo.drible->Set_Vel(800);
+		robo.motorDrible->Set_Vel(800);
 	//robo.drible->Set_Vel(100);
 	else if(!robotcmd.spinner)
-		robo.drible->Set_Vel(0);
+		robo.motorDrible->Set_Vel(0);
 }
-
-//  5º dia: ainda estou na classe robo
 
 void Robo::interruptTransmitter(){
     bool status=0;

@@ -16,15 +16,14 @@
 #ifndef MOTOR_H_
 #define MOTOR_H_
 
-//valor aproximado do raio da roda omni, em metros
-#define R_roda 0.028
+
+#define R_roda 0.028		//valor aproximado do raio da roda omni, em metros
 #define PI 3.1415926
-//tempo (em s) entre as interrupções geradas pelo TIM6
-#define TIM6_delay 0.001
-//número de divisões do encoder
-#define ENC_DIV 400
-//para cada 8 giros do motor, a roda gira 1 vez
-#define FT_TRANS 8
+#define TIM6_delay 0.001	//tempo (em s) entre as interrupções geradas pelo TIM6
+
+#define ENC_DIV 400			//número de divisões do encoder
+
+#define FT_TRANS 8			//para cada 8 giros do motor, a roda gira 1 vez
 #define CONVERSION 2*PI*R_roda/(TIM6_delay*ENC_DIV*FT_TRANS)
 
 class Motor {
@@ -36,10 +35,15 @@ public:
 			Encoder *Enc,
 			Timer_Time2 *MTimer);
 	void Control_Pos(float hold_position);
-	void Control_Speed(float hold_speed);
-	void Calc_Speed();
+
+	void get_motor_speed();
+	void control_motor_speed(float desired_speed);
+	void set_motor_speed(uint32_t dutycycle);
+
 	void SetDutyCycle(int16_t answer);
-	int16_t Get_Desloc();//retorna o deslocamento do eixo do motor, unidade: divisões de encoder
+
+	int16_t Get_Desloc();	//retorna o deslocamento do eixo do motor, unidade: divisões de encoder
+
 	static void SetPID(float p, float i, float d);
 	static void GetPID(float c[]);
 

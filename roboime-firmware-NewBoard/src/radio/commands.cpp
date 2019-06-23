@@ -243,10 +243,10 @@ uint16_t cmd_chute(uint16_t argc, uint8_t *argv8[]){
 		size+=sprintf(buffer+size, "OK!\r\n");
 		switch(pot){
 		case 1:
-			robo.ChuteBaixo((float) 100);
+			robo.low_kick_cmd((float) 100);
 			break;
 		case 2:
-			robo.HighKick((float) 100);
+			robo.high_kick_cmd((float) 100);
 			break;
 		default:
 			break;
@@ -268,7 +268,7 @@ uint16_t cmd_robv(uint16_t argc, uint8_t *argv8[]){
 		v[0]=atof(argv[1]);
 		v[1]=atof(argv[2]);
 		v[2]=atof(argv[3]);
-		robo.set_speed(v[0], v[1], v[2]);
+		robo.set_robo_speed(v[0], v[1], v[2]);
 		size+=sprintf(buffer+size, "OK\r\n");
 	} else {
 		size+=sprintf(buffer+size, "Syntax: robv velt velr vela \r\n");
@@ -308,7 +308,7 @@ uint16_t cmd_motv(uint16_t argc, uint8_t *argv8[]){
 	char* buffer=(char*)argv[0];
 	uint8_t motnr=0;
 	if(argc==2){//com 1 argumento, motv imprime a velocidade da roda
-		robo.get_wheel_speeds(robo.real_wheel_speed);
+		robo.get_wheel_speed();
 		motnr=atoi(argv[1]);
 		size+=sprintf(buffer+size, "Roda %d: %.3f m/s\r\n",motnr,robo.real_wheel_speed[motnr]);
 	} else if(argc==3 && motnr<5){
@@ -323,7 +323,7 @@ uint16_t cmd_motv(uint16_t argc, uint8_t *argv8[]){
 		v[2]=atof(argv[3]);
 		v[3]=atof(argv[4]);
 
-		robo.set_speed(v);
+		robo.set_robo_speed(v);
 		size+=sprintf(buffer+size, "OK\r\n");
 	} else {
 		size+=sprintf(buffer+size, "Syntax: motv 0..4 vel \r\n");
@@ -364,10 +364,10 @@ uint16_t cmd_readv(uint16_t argc, uint8_t *argv8[]){
 	uint16_t size=0;
 	char* buffer=(char*)argv[0];
 	if(argc==1){
-		float v[4];
-		robo.get_wheel_speeds(v);
+
+		robo.get_wheel_speed();
 		for(int i=0; i<4;i++){
-			size+=sprintf(buffer+size, "Roda %d: %.2f m/s\r\n",i,v[i]);
+			size+=sprintf(buffer+size, "Roda %d: %.2f m/s\r\n",i,robo.real_wheel_speed[i]);
 		}
 		size+=sprintf(buffer+size, "OK\r\n");
 	} else {
