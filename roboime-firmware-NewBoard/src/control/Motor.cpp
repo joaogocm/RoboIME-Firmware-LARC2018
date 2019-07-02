@@ -12,8 +12,8 @@
  * Tc =0.7s
  */
 float Motor::cp=8000.0f;
-float Motor::cd=1000.0f;
 float Motor::ci=10.0f;
+float Motor::cd=1000.0f;
 
 
 Motor::Motor(Pwm *A_High,
@@ -95,11 +95,13 @@ void Motor::SetDutyCycle(int16_t answer)
 		{
 			answer=1000;
 		}
+		/**** ROBO NOVO: TROCAR ESTE BLOCO COM O PRÓXIMO ****/
 		Motor_A_Low->Reset();
 		Motor_B_High->set_DutyCycle(0);
 		while(Motor_A_Low->Status());
 		Motor_A_High->set_DutyCycle(answer);
 		Motor_B_Low->Set();
+		/****************************************************/
 	}
 	else
 	{
@@ -108,11 +110,13 @@ void Motor::SetDutyCycle(int16_t answer)
 		{
 			answer=1000;
 		}
+		/**** ROBO NOVO: TROCAR ESTE BLOCO COM O ANTERIOR ****/
 		Motor_B_Low->Reset();
 		Motor_A_High->set_DutyCycle(0);
 		while(Motor_B_Low->Status());
 		Motor_B_High->set_DutyCycle(answer);
 		Motor_A_Low->Set();
+		/*****************************************************/
 	}
 	return;
 }

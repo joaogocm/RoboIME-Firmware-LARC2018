@@ -17,6 +17,15 @@
 #define MOTOR_H_
 
 
+/*ROBO NOVO:
+ * #define R_roda
+ * #define PI 3.1415926
+ * #define TIM6_delay 0.001
+ * #define ENC_DIV 400
+ * #define FT_TRANS 6(?)
+ * #define CONVERSION -2*PI*R_roda/(TIM6_delay*ENC_DIV*FT_TRANS)
+ */
+
 #define R_roda 0.028		//valor aproximado do raio da roda omni, em metros
 #define PI 3.1415926
 #define TIM6_delay 0.001	//tempo (em s) entre as interrupções geradas pelo TIM6
