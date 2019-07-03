@@ -96,11 +96,11 @@ void Motor::SetDutyCycle(int16_t answer)
 			answer=1000;
 		}
 		/**** ROBO NOVO: TROCAR ESTE BLOCO COM O PRÓXIMO ****/
-		Motor_A_Low->Reset();
-		Motor_B_High->set_DutyCycle(0);
-		while(Motor_A_Low->Status());
-		Motor_A_High->set_DutyCycle(answer);
-		Motor_B_Low->Set();
+		Motor_B_Low->Reset();
+		Motor_A_High->set_DutyCycle(0);
+		while(Motor_B_Low->Status());
+		Motor_B_High->set_DutyCycle(answer);
+		Motor_A_Low->Set();
 		/****************************************************/
 	}
 	else
@@ -111,11 +111,11 @@ void Motor::SetDutyCycle(int16_t answer)
 			answer=1000;
 		}
 		/**** ROBO NOVO: TROCAR ESTE BLOCO COM O ANTERIOR ****/
-		Motor_B_Low->Reset();
-		Motor_A_High->set_DutyCycle(0);
-		while(Motor_B_Low->Status());
-		Motor_B_High->set_DutyCycle(answer);
-		Motor_A_Low->Set();
+		Motor_A_Low->Reset();
+		Motor_B_High->set_DutyCycle(0);
+		while(Motor_A_Low->Status());
+		Motor_A_High->set_DutyCycle(answer);
+		Motor_B_Low->Set();
 		/*****************************************************/
 	}
 	return;

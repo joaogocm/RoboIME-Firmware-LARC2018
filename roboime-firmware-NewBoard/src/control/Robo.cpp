@@ -60,7 +60,8 @@ Robo::Robo(Motor *roboMotor0, Motor *roboMotor1, Motor *roboMotor2, Motor *roboM
     /*fim de tentativa de logica para o botão*/
 	//_id=0;
 	//channel=43;
-	channel=117;
+	channel=107;
+	//channel=117;
 	address=0xE7E7E7E700;
 	last_packet_ms = 0;
 }
