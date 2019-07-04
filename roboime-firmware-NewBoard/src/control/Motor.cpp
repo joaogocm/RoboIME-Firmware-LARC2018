@@ -11,7 +11,7 @@
  * Kc=3.2
  * Tc =0.7s
  */
-float Motor::cp=8000.0f;
+float Motor::cp=15000.0f;
 float Motor::ci=10.0f;
 float Motor::cd=1000.0f;
 
