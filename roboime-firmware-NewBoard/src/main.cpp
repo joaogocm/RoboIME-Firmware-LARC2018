@@ -225,6 +225,7 @@ int main(void){
 
 		if(GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_11)){
 			led_c.On(); //acende LED do chute quando o robô está com a bola
+			robo.ball_detection();
 			robo.motorDrible->Set_Vel(0); //garante que o drible está desligado quando o robô está com a bola
 		}
 		else led_c.Off();

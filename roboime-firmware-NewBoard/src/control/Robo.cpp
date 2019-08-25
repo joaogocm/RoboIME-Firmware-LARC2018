@@ -78,20 +78,26 @@ void Robo::init(){
 	_nrf24->StartRX_ESB(channel, address + GetId(), 32, 1);
 }
 
+void Robo::ball_detection(){
+	last_ball_detection_time=GetLocalTime();
+}
+
 void Robo::high_kick_cmd(float power){
 	if((GetLocalTime()-last_kick_time)>700){
-			if(GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_11)){
+			if(GetLocalTime()-last_ball_detection_time<200){
 				high_kick->kick_cmd((uint32_t) power);
 				last_kick_time = GetLocalTime();
+				last_ball_detection_time = GetLocalTime();
 			}
 		}
 }
 
 void Robo::low_kick_cmd(float power){
 	if((GetLocalTime()-last_kick_time)>700){
-		if(GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_11)){
+		if(GetLocalTime()-last_ball_detection_time<200){
 			low_kick->kick_cmd((uint32_t) power);
 			last_kick_time = GetLocalTime();
+			last_ball_detection_time = GetLocalTime();
 		}
 	}
 }
@@ -296,7 +302,7 @@ void Robo::processPacket(){
 	if(robotcmd.kickspeedx!=0)
 		robo.low_kick_cmd(robotcmd.kickspeedx);
 	if(robotcmd.kickspeedz!=0)
-		robo.high_kick_cmd(robotcmd.kickspeedz);
+		robo.low_kick_cmd(robotcmd.kickspeedz);
 	if(robotcmd.spinner)
 		robo.motorDrible->Set_Vel(800);
 	//robo.drible->Set_Vel(100);
