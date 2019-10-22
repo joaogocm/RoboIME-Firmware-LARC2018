@@ -59,8 +59,8 @@ Robo::Robo(Motor *roboMotor0, Motor *roboMotor1, Motor *roboMotor2, Motor *roboM
    // osDelay(100);
     /*fim de tentativa de logica para o botão*/
 	//_id=0;
-	channel=43;
-	//channel=107;
+	//channel=43;
+	channel=107;
 	//channel=117;
 	address=0xE7E7E7E700;
 	last_packet_ms = 0;
@@ -85,7 +85,7 @@ void Robo::ball_detection(){
 void Robo::high_kick_cmd(float power){
 	if((GetLocalTime()-last_kick_time)>700){
 			if(GetLocalTime()-last_ball_detection_time<200){
-				high_kick->kick_cmd((uint32_t) power);
+				low_kick->kick_cmd((uint32_t) power);
 				last_kick_time = GetLocalTime();
 				last_ball_detection_time = GetLocalTime();
 			}
@@ -95,7 +95,7 @@ void Robo::high_kick_cmd(float power){
 void Robo::low_kick_cmd(float power){
 	if((GetLocalTime()-last_kick_time)>700){
 		if(GetLocalTime()-last_ball_detection_time<200){
-			low_kick->kick_cmd((uint32_t) power);
+			high_kick->kick_cmd((uint32_t) power);
 			last_kick_time = GetLocalTime();
 			last_ball_detection_time = GetLocalTime();
 		}
@@ -302,7 +302,7 @@ void Robo::processPacket(){
 	if(robotcmd.kickspeedx!=0)
 		robo.low_kick_cmd(robotcmd.kickspeedx);
 	if(robotcmd.kickspeedz!=0)
-		robo.low_kick_cmd(robotcmd.kickspeedz);
+		robo.high_kick_cmd(robotcmd.kickspeedz);
 	if(robotcmd.spinner)
 		robo.motorDrible->Set_Vel(800);
 	//robo.drible->Set_Vel(100);
