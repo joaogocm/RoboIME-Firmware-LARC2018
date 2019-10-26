@@ -297,12 +297,18 @@ void Robo::interruptTestMode(){
 	//robo.controlbit = true;
 }
 
+//IO_Pin_STM32 CE(IO_Pin::IO_Pin_Mode_OUT, GPIOD, GPIO_Pin_8, GPIO_PuPd_UP, GPIO_OType_PP); //PD8->CHARGE ENABLE
 void Robo::processPacket(){
 	robo.control_robo_speed(robotcmd.veltangent, robotcmd.velnormal, robotcmd.velangular);
-	if(robotcmd.kickspeedx!=0)
+	if(robotcmd.kickspeedx!=0){
 		robo.low_kick_cmd(robotcmd.kickspeedx);
-	if(robotcmd.kickspeedz!=0)
+		//CE.Reset();
+	}
+	if(robotcmd.kickspeedz!=0){
 		robo.high_kick_cmd(robotcmd.kickspeedz);
+		//CE.Reset();
+	}
+
 	if(robotcmd.spinner)
 		robo.motorDrible->Set_Vel(800);
 	//robo.drible->Set_Vel(100);

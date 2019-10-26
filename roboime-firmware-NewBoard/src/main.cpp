@@ -134,15 +134,15 @@ int main(void){
 	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
 	GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP;
 
-	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_11;
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_11; //SENSOR 2
 	GPIO_Init(GPIOC ,&GPIO_InitStructure);
 
-	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_1;
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_1; //SENSOR 1
 	GPIO_Init(GPIOD ,&GPIO_InitStructure);
 
 	uint32_t last_charge_en=0;
 
-	IO_Pin_STM32 CE(IO_Pin::IO_Pin_Mode_OUT, GPIOD, GPIO_Pin_8, GPIO_PuPd_UP, GPIO_OType_PP); //PD8->CHARGE ENABLE
+	//IO_Pin_STM32 CE(IO_Pin::IO_Pin_Mode_OUT, GPIOD, GPIO_Pin_8, GPIO_PuPd_UP, GPIO_OType_PP); //PD8->CHARGE ENABLE
 
 	/***************************** CORRIGIR CODIGOS DO STMPE E DO MPU PARA SPL ********************************/
 	//TESTE STMPE
@@ -223,7 +223,7 @@ int main(void){
 		//ShowNumber(robo.GetId());
 		//ShowNumber(ReadID(FLASH_SECTOR_ADDRESS, NEXT_FLASH_SECTOR_ADDRESS)<10);
 
-		if(GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_11)){
+		if(GPIO_ReadInputDataBit(GPIOD, GPIO_Pin_1)){
 			led_c.On(); //acende LED do chute quando o robô está com a bola
 			robo.ball_detection();
 			robo.motorDrible->Set_Vel(0); //garante que o drible está desligado quando o robô está com a bola
@@ -232,11 +232,13 @@ int main(void){
 
 		robo._nrf24->InterruptCallback();
 		usb_device_class_cdc_vcp.GetData(_usbserialbuffer, 1024);
-		CE.Set();
+		//CE.Set();
+		robo.low_kick->charge_set();
 
 		if(GetLocalTime() - last_charge_en > 5000){
 			last_charge_en=GetLocalTime();
-			CE.Reset();
+			//CE.Reset();
+			robo.low_kick->charge_rst();
 		}
 
 		if(robo.InTestMode()){

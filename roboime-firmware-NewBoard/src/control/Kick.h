@@ -17,7 +17,10 @@ public:
 	Kick(GPIO *pin, uint32_t power);
 	void set_kick_power(uint32_t power);
 	void kick_cmd(uint32_t power);
+	void charge_rst();
+	void charge_set();
 private:
+	GPIO *chargePin;
 	GPIO *kickPin;
 	uint32_t kickPower;
 };
